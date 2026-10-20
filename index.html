@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>まいにちTR</title>
+<meta name="description" content="お風呂上がりの約6分。6つの動きを順番に案内します。">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="まいにちTR">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f766e">
+<style>
+  :root {
+    --bg: #f6f7f5;
+    --surface: #ffffff;
+    --text: #1c2321;
+    --muted: #5f6b67;
+    --line: #dfe4e1;
+    --accent: #0f766e;
+    --accent-text: #ffffff;
+    --prep: #b45309;
+    --prep-bg: #fff4e5;
+    --done: #15803d;
+    --bar-bg: #e3e8e6;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101413;
+      --surface: #1a201e;
+      --text: #eef2f0;
+      --muted: #9aa8a3;
+      --line: #2c3532;
+      --accent: #2dd4bf;
+      --accent-text: #062b27;
+      --prep: #fbbf24;
+      --prep-bg: #2a2212;
+      --done: #4ade80;
+      --bar-bg: #2c3532;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101413;
+    --surface: #1a201e;
+    --text: #eef2f0;
+    --muted: #9aa8a3;
+    --line: #2c3532;
+    --accent: #2dd4bf;
+    --accent-text: #062b27;
+    --prep: #fbbf24;
+    --prep-bg: #2a2212;
+    --done: #4ade80;
+    --bar-bg: #2c3532;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  header h1 { font-size: 20px; margin: 0; }
+  .theme { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .theme button {
+    border: 0; background: transparent; color: var(--muted);
+    font-size: 12px; padding: 6px 10px; cursor: pointer;
+  }
+  .theme button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 12px 0; }
+  .lead { color: var(--muted); margin: 0 0 4px; }
+  .big-btn {
+    display: block; width: 100%; border: 0; border-radius: 14px; cursor: pointer;
+    background: var(--accent); color: var(--accent-text);
+    font-size: 20px; font-weight: 700; padding: 18px 12px; margin: 12px 0 8px;
+  }
+  .sub-btn {
+    display: block; width: 100%; border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
+    background: var(--surface); color: var(--text);
+    font-size: 16px; padding: 14px 12px;
+  }
+  ol.menu { margin: 0; padding-left: 1.4em; }
+  ol.menu li { margin: 6px 0; }
+  ol.menu small { color: var(--muted); display: block; }
+  .note { font-size: 13px; color: var(--muted); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .switch { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  .switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+  /* 実行中の画面 */
+  #run { display: none; }
+  .run-top { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); }
+  .bar { height: 8px; background: var(--bar-bg); border-radius: 999px; overflow: hidden; margin: 8px 0 4px; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .3s linear; }
+  .stage { border-radius: 20px; padding: 20px 16px; margin: 12px 0; text-align: center; background: var(--surface); border: 2px solid var(--line); }
+  .stage.prep { background: var(--prep-bg); border-color: var(--prep); }
+  .stage.go { border-color: var(--accent); }
+  .tag { display: inline-block; font-size: 14px; font-weight: 700; padding: 2px 12px; border-radius: 999px; }
+  .stage.prep .tag { background: var(--prep); color: var(--bg); }
+  .stage.go .tag { background: var(--accent); color: var(--accent-text); }
+  .ex-name { font-size: 26px; font-weight: 800; margin: 10px 0 2px; line-height: 1.3; }
+  .ex-step { font-size: 18px; margin: 0; }
+  .count { font-size: 96px; font-weight: 800; line-height: 1.1; margin: 12px 0 0; font-variant-numeric: tabular-nums; }
+  .reps { font-size: 22px; font-weight: 700; min-height: 1.6em; font-variant-numeric: tabular-nums; }
+  .tip { font-size: 16px; text-align: left; margin: 12px 0 0; padding: 12px; border-radius: 12px; background: var(--bg); }
+  .controls { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; }
+  .controls button {
+    border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text);
+    font-size: 16px; padding: 14px 4px; cursor: pointer;
+  }
+  .controls button.main { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+  .quit { display: block; margin: 16px auto 0; background: none; border: 0; color: var(--muted); font-size: 14px; text-decoration: underline; cursor: pointer; }
+
+  /* 終わりの画面 */
+  #done { display: none; text-align: center; }
+  #done .big { font-size: 40px; font-weight: 800; color: var(--done); margin: 24px 0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>まいにちTR</h1>
+    <div class="theme" role="group" aria-label="表示">
+      <button type="button" data-theme-choice="auto">自動</button>
+      <button type="button" data-theme-choice="light">ライト</button>
+      <button type="button" data-theme-choice="dark">ダーク</button>
+    </div>
+  </header>
+
+  <!-- はじめの画面 -->
+  <section id="home">
+    <div class="card">
+      <p class="lead">お風呂上がりに、ゆっくり。反動はつけない。</p>
+      <button type="button" class="big-btn" id="startFull">はじめる（約<span id="fullMin">6</span>分）</button>
+      <button type="button" class="sub-btn" id="startMini">疲れた日：胸だけ 30秒</button>
+      <p class="note">疲れた日は30秒だけでもOK。それでも「やった」でいい。</p>
+    </div>
+
+    <div class="card">
+      <ol class="menu" id="menuList"></ol>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <label class="switch"><input type="checkbox" id="soundOn" checked> 合図の音</label>
+        <label class="switch"><input type="checkbox" id="tickOn" checked> 回数の音</label>
+      </div>
+      <p class="note">マナーモードだと音が鳴らないことがあります。画面の色と数字でも分かるようにしてあります。</p>
+      <p class="note">⚠ 痛いところが出たら、その動きはやめて次へ。</p>
+    </div>
+  </section>
+
+  <!-- 実行中の画面 -->
+  <section id="run" aria-live="polite">
+    <div class="run-top"><span id="runPos">1 / 6</span><span id="runLeft">のこり 6:00</span></div>
+    <div class="bar"><div id="barFill"></div></div>
+    <div class="stage" id="stage">
+      <span class="tag" id="tag">じゅんび</span>
+      <div class="ex-name" id="exName"></div>
+      <p class="ex-step" id="exStep"></p>
+      <div class="count" id="count">10</div>
+      <div class="reps" id="reps"></div>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="controls">
+      <button type="button" id="btnBack">◀ もどる</button>
+      <button type="button" id="btnPause" class="main">一時停止</button>
+      <button type="button" id="btnNext">次へ ▶</button>
+    </div>
+    <button type="button" class="quit" id="btnQuit">やめる</button>
+  </section>
+
+  <!-- 終わりの画面 -->
+  <section id="done">
+    <div class="big">おつかれ！</div>
+    <p>今日はここまで。ゆっくり休もう。</p>
+    <button type="button" class="sub-btn" id="btnHome">はじめの画面にもどる</button>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== メニュー（ここを書き換えれば中身が変わる） =====
+  // 各セグメント: sec=秒数, reps=回数（回数のない「キープ」は省く）
+  var EXERCISES = [
+    {
+      name: '骨盤ゆらし',
+      setup: '四つんばい。手は肩の下、ひざは足のつけ根の下',
+      tip: 'おしりを後ろに突き出す ↔ おへそをのぞく。骨盤から動かす',
+      segs: [{ step: '骨盤を前後にゆらす', sec: 50, reps: 10 }]
+    },
+    {
+      name: '胸だけ動かす',
+      setup: '椅子に浅く座る。足の裏を床にぺったり',
+      tip: 'おしりと頭はなるべく動かさない。胸だけをスライド',
+      segs: [
+        { step: '胸を前・後ろ', sec: 30, reps: 10 },
+        { step: '胸を右・左', sec: 30, reps: 10 }
+      ]
+    },
+    {
+      name: '裏もものストレッチ',
+      setup: '仰向け。タオルを足の裏にかける',
+      tip: 'ひざは軽くのばす。痛くないところで止めて、息をはく',
+      segs: [
+        { step: '右足を上へ（キープ）', sec: 30 },
+        { step: '左足を上へ（キープ）', sec: 30, change: '足をかえて' }
+      ]
+    },
+    {
+      name: '股関節の切り替え',
+      setup: '床に座る。両ひざを90度に曲げて、足を広げる。手は後ろにつく',
+      tip: '両ひざを左右にパタンと倒す。上半身はまっすぐ',
+      segs: [{ step: 'ひざを左右に倒す', sec: 40, reps: 10 }]
+    },
+    {
+      name: 'お尻上げ',
+      setup: '仰向けでひざを立てる。足は腰の幅',
+      tip: 'かかとで床を押して上げる。上で2秒止めて、ゆっくり下ろす',
+      segs: [{ step: 'お尻を上げる・下ろす', sec: 50, reps: 10 }]
+    },
+    {
+      name: '胸を開く',
+      setup: '横向きに寝る。ひざを曲げてそろえ、両腕を前にのばす',
+      tip: 'ひざはそろえたまま。上の腕と胸だけを後ろへ開く',
+      segs: [
+        { step: '右を下にして、胸を開く', sec: 30, reps: 5 },
+        { step: '左を下にして、胸を開く', sec: 30, reps: 5, change: '反対向きになって' }
+      ]
+    }
+  ];
+  var MINI = [
+    {
+      name: '胸だけ動かす',
+      setup: '椅子に浅く座る。足の裏を床にぺったり',
+      tip: 'おしりと頭はなるべく動かさない。胸だけをスライド',
+      segs: [
+        { step: '胸を前・後ろ', sec: 15, reps: 5 },
+        { step: '胸を右・左', sec: 15, reps: 5 }
+      ]
+    }
+  ];
+  var PREP_SEC = 10;   // 種目の前のじゅんび
+  var CHANGE_SEC = 6;  // 左右の入れかえ
+
+  // ===== 表示の切り替え（自動／ライト／ダーク） =====
+  var root = document.documentElement;
+  function applyTheme(choice) {
+    if (choice === 'light' || choice === 'dark') root.setAttribute('data-theme', choice);
+    else root.removeAttribute('data-theme');
+    var btns = document.querySelectorAll('[data-theme-choice]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].setAttribute('aria-pressed', btns[i].getAttribute('data-theme-choice') === choice ? 'true' : 'false');
+    }
+  }
+  var savedTheme = 'auto';
+  try { savedTheme = localStorage.getItem('dtr-theme') || 'auto'; } catch (e) {}
+  applyTheme(savedTheme);
+  document.querySelectorAll('[data-theme-choice]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var c = b.getAttribute('data-theme-choice');
+      applyTheme(c);
+      try { localStorage.setItem('dtr-theme', c); } catch (e) {}
+    });
+  });
+
+  // ===== 音 =====
+  var soundOn = document.getElementById('soundOn');
+  var tickOn = document.getElementById('tickOn');
+  try {
+    if (localStorage.getItem('dtr-sound') === '0') soundOn.checked = false;
+    if (localStorage.getItem('dtr-tick') === '0') tickOn.checked = false;
+  } catch (e) {}
+  soundOn.addEventListener('change', function () { try { localStorage.setItem('dtr-sound', soundOn.checked ? '1' : '0'); } catch (e) {} });
+  tickOn.addEventListener('change', function () { try { localStorage.setItem('dtr-tick', tickOn.checked ? '1' : '0'); } catch (e) {} });
+
+  var audioCtx = null;
+  function unlockAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      g.gain.value = 0.0001; o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 0.02);
+    } catch (e) {}
+  }
+  function beep(freq, dur, vol) {
+    if (!soundOn.checked || !audioCtx) return;
+    try {
+      var t = audioCtx.currentTime;
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.3, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    } catch (e) {}
+  }
+
+  // ===== 画面が消えないようにする =====
+  var wakeLock = null;
+  function requestWake() {
+    try {
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+  function releaseWake() {
+    try { if (wakeLock) wakeLock.release(); } catch (e) {}
+    wakeLock = null;
+  }
+
+  // ===== 流れを組み立てる =====
+  function buildSteps(list) {
+    var steps = [];
+    list.forEach(function (ex, exIdx) {
+      steps.push({ kind: 'prep', ex: ex, exIdx: exIdx, sec: PREP_SEC, step: ex.setup });
+      ex.segs.forEach(function (s) {
+        if (s.change) steps.push({ kind: 'prep', ex: ex, exIdx: exIdx, sec: CHANGE_SEC, step: s.change });
+        steps.push({ kind: 'go', ex: ex, exIdx: exIdx, sec: s.sec, step: s.step, reps: s.reps || 0 });
+      });
+    });
+    return steps;
+  }
+  function totalSec(steps) { return steps.reduce(function (a, s) { return a + s.sec; }, 0); }
+  function fmt(sec) { sec = Math.max(0, Math.ceil(sec)); var m = Math.floor(sec / 60), s = sec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
+
+  // はじめの画面のメニュー一覧
+  var menuList = document.getElementById('menuList');
+  EXERCISES.forEach(function (ex) {
+    var li = document.createElement('li');
+    var detail = ex.segs.map(function (s) { return s.step + (s.reps ? '（' + s.reps + '回）' : '（' + s.sec + '秒）'); }).join('／');
+    li.innerHTML = '<strong></strong><small></small>';
+    li.querySelector('strong').textContent = ex.name;
+    li.querySelector('small').textContent = detail;
+    menuList.appendChild(li);
+  });
+  document.getElementById('fullMin').textContent = String(Math.round(totalSec(buildSteps(EXERCISES)) / 60));
+
+  // ===== 実行 =====
+  var el = {
+    home: document.getElementById('home'), run: document.getElementById('run'), done: document.getElementById('done'),
+    stage: document.getElementById('stage'), tag: document.getElementById('tag'),
+    exName: document.getElementById('exName'), exStep: document.getElementById('exStep'),
+    count: document.getElementById('count'), reps: document.getElementById('reps'), tip: document.getElementById('tip'),
+    pos: document.getElementById('runPos'), left: document.getElementById('runLeft'), bar: document.getElementById('barFill'),
+    pause: document.getElementById('btnPause')
+  };
+  var steps = [], idx = 0, exCount = 0, elapsed = 0, lastTs = 0, running = false, timer = null;
+  var lastWhole = -1, lastRep = 0, total = 0;
+
+  function show(name) {
+    el.home.style.display = name === 'home' ? 'block' : 'none';
+    el.run.style.display = name === 'run' ? 'block' : 'none';
+    el.done.style.display = name === 'done' ? 'block' : 'none';
+    window.scrollTo(0, 0);
+  }
+
+  function start(list) {
+    unlockAudio();
+    requestWake();
+    steps = buildSteps(list);
+    exCount = list.length;
+    total = totalSec(steps);
+    idx = 0;
+    enterStep();
+    show('run');
+    resume();
+  }
+
+  function enterStep() {
+    elapsed = 0; lastWhole = -1; lastRep = 0;
+    var s = steps[idx];
+    el.stage.className = 'stage ' + s.kind;
+    el.tag.textContent = s.kind === 'prep' ? 'じゅんび' : 'スタート';
+    el.exName.textContent = s.ex.name;
+    el.exStep.textContent = s.step;
+    el.tip.textContent = s.kind === 'prep' && s.step === s.ex.setup ? '次は：' + s.ex.tip : s.ex.tip;
+    el.pos.textContent = (s.exIdx + 1) + ' / ' + exCount;
+    if (s.kind === 'go') beep(880, 0.25, 0.35);
+    render();
+  }
+
+  function render() {
+    var s = steps[idx];
+    var remain = s.sec - elapsed;
+    el.count.textContent = String(Math.max(0, Math.ceil(remain)));
+    if (s.kind === 'go' && s.reps) {
+      var per = s.sec / s.reps;
+      var rep = Math.min(s.reps, Math.floor(elapsed / per) + 1);
+      el.reps.textContent = rep + ' / ' + s.reps + ' 回';
+      if (rep !== lastRep) {
+        if (lastRep !== 0 && tickOn.checked) beep(660, 0.08, 0.15);
+        lastRep = rep;
+      }
+    } else if (s.kind === 'go') {
+      el.reps.textContent = 'キープ';
+    } else {
+      el.reps.textContent = '';
+    }
+    var before = 0;
+    for (var i = 0; i < idx; i++) before += steps[i].sec;
+    var done = before + elapsed;
+    el.bar.style.width = (total ? (done / total * 100) : 0) + '%';
+    el.left.textContent = 'のこり ' + fmt(total - done);
+    // 残り3秒の合図
+    var whole = Math.ceil(remain);
+    if (whole !== lastWhole) {
+      if (whole <= 3 && whole >= 1 && lastWhole !== -1) beep(520, 0.12, 0.25);
+      lastWhole = whole;
+    }
+  }
+
+  function tick() {
+    var now = performance.now();
+    var dt = (now - lastTs) / 1000;
+    lastTs = now;
+    if (!running) return;
+    elapsed += Math.min(dt, 1);
+    if (elapsed >= steps[idx].sec) {
+      next();
+    } else {
+      render();
+    }
+  }
+
+  function resume() {
+    running = true;
+    lastTs = performance.now();
+    el.pause.textContent = '一時停止';
+    if (!timer) timer = setInterval(tick, 100);
+    requestWake();
+  }
+  function pause() {
+    running = false;
+    el.pause.textContent = 'つづける';
+  }
+  function stopAll() {
+    running = false;
+    if (timer) { clearInterval(timer); timer = null; }
+    releaseWake();
+  }
+  function next() {
+    if (idx < steps.length - 1) { idx++; enterStep(); }
+    else { stopAll(); beep(988, 0.4, 0.35); show('done'); }
+  }
+  function back() {
+    // 種目の途中なら頭から。頭なら1つ前へ
+    if (elapsed > 2 || idx === 0) { enterStep(); return; }
+    idx--; enterStep();
+  }
+
+  document.getElementById('startFull').addEventListener('click', function () { start(EXERCISES); });
+  document.getElementById('startMini').addEventListener('click', function () { start(MINI); });
+  el.pause.addEventListener('click', function () { running ? pause() : resume(); });
+  document.getElementById('btnNext').addEventListener('click', function () { next(); });
+  document.getElementById('btnBack').addEventListener('click', function () { back(); });
+  document.getElementById('btnQuit').addEventListener('click', function () { stopAll(); show('home'); });
+  document.getElementById('btnHome').addEventListener('click', function () { show('home'); });
+
+  // 別のアプリに切り替えたら一時停止（戻ったら「つづける」を押す）
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { if (running) pause(); }
+    else if (timer) { requestWake(); }
+  });
+
+  // 電波がなくても開けるようにする
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
