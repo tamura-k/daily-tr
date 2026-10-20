@@ -156,7 +156,8 @@
         <label class="switch"><input type="checkbox" id="soundOn" checked> 合図の音</label>
         <label class="switch"><input type="checkbox" id="tickOn" checked> 回数の音</label>
       </div>
-      <p class="note">マナーモードだと音が鳴らないことがあります。画面の色と数字でも分かるようにしてあります。</p>
+      <button type="button" class="sub-btn" id="soundTest" style="margin-top:12px">🔈 音のテスト</button>
+      <p class="note">鳴らないときは、iPhoneの音量（横のボタン）を上げてみてください。画面の色と数字でも分かるようにしてあります。</p>
       <p class="note">⚠ 痛いところが出たら、その動きはやめて次へ。</p>
     </div>
   </section>
@@ -288,10 +289,34 @@
   tickOn.addEventListener('change', function () { try { localStorage.setItem('dtr-tick', tickOn.checked ? '1' : '0'); } catch (e) {} });
 
   var audioCtx = null;
+  var silentEl = null;
+  // iPhoneはそのままだとマナーモードのスイッチで合図の音が消えるので、
+  // 「音楽を流すアプリ」の扱いにしてから鳴らす
+  function silentWavUrl() {
+    var rate = 8000, n = 800, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    function str(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+    str(36, 'data'); v.setUint32(40, n, true);
+    for (var i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
   function unlockAudio() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    try {
+      if (!silentEl) {
+        silentEl = document.createElement('audio');
+        silentEl.setAttribute('playsinline', '');
+        silentEl.loop = true;
+        silentEl.src = silentWavUrl();
+      }
+      var p = silentEl.play();
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (audioCtx.state !== 'running') audioCtx.resume();
       var o = audioCtx.createOscillator(), g = audioCtx.createGain();
       g.gain.value = 0.0001; o.connect(g); g.connect(audioCtx.destination);
       o.start(); o.stop(audioCtx.currentTime + 0.02);
@@ -323,6 +348,7 @@
   function releaseWake() {
     try { if (wakeLock) wakeLock.release(); } catch (e) {}
     wakeLock = null;
+    try { if (silentEl) silentEl.pause(); } catch (e) {}
   }
 
   // ===== 流れを組み立てる =====
@@ -449,6 +475,7 @@
   function pause() {
     running = false;
     el.pause.textContent = 'つづける';
+    try { if (silentEl) silentEl.pause(); } catch (e) {}
   }
   function stopAll() {
     running = false;
@@ -467,7 +494,14 @@
 
   document.getElementById('startFull').addEventListener('click', function () { start(EXERCISES); });
   document.getElementById('startMini').addEventListener('click', function () { start(MINI); });
-  el.pause.addEventListener('click', function () { running ? pause() : resume(); });
+  document.getElementById('soundTest').addEventListener('click', function () {
+    unlockAudio();
+    var was = soundOn.checked; soundOn.checked = true;
+    setTimeout(function () { beep(880, 0.25, 0.35); }, 150);
+    setTimeout(function () { beep(660, 0.12, 0.3); soundOn.checked = was; }, 600);
+    setTimeout(function () { try { if (silentEl && !running) silentEl.pause(); } catch (e) {} }, 1200);
+  });
+  el.pause.addEventListener('click', function () { if (running) { pause(); } else { unlockAudio(); resume(); } });
   document.getElementById('btnNext').addEventListener('click', function () { next(); });
   document.getElementById('btnBack').addEventListener('click', function () { back(); });
   document.getElementById('btnQuit').addEventListener('click', function () { stopAll(); show('home'); });
