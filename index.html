@@ -93,6 +93,7 @@
   ol.menu { margin: 0; padding-left: 1.4em; }
   ol.menu li { margin: 6px 0; }
   ol.menu small { color: var(--muted); display: block; }
+  ol.menu a { color: var(--accent); font-size: 14px; }
   .note { font-size: 13px; color: var(--muted); }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .switch { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
@@ -196,6 +197,7 @@
 
   // ===== メニュー（ここを書き換えれば中身が変わる） =====
   // 各セグメント: sec=秒数, reps=回数（回数のない「キープ」は省く）
+  // video=参考動画のURL（あれば、はじめの画面のメニュー一覧にリンクを出す）
   var EXERCISES = [
     {
       name: 'キャット＆カウ（骨盤上下ゆらし）',
@@ -207,6 +209,7 @@
       name: '椅子に座って胸だけを動かす（前後・左右）',
       setup: '椅子に浅く座る。足の裏を床にぺったり',
       tip: 'おしりと頭はなるべく動かさない。胸だけをスライド',
+      video: 'https://youtu.be/S1P0iD4DKfM',
       segs: [
         { step: '胸を前・後ろ', sec: 30, reps: 10 },
         { step: '胸を右・左', sec: 30, reps: 10 }
@@ -380,6 +383,14 @@
     li.innerHTML = '<strong></strong><small></small>';
     li.querySelector('strong').textContent = ex.name;
     li.querySelector('small').textContent = detail;
+    if (ex.video) {
+      var a = document.createElement('a');
+      a.href = ex.video;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = '▶ 参考動画（ダンスの「胸のアイソレーション」と同じ動き）';
+      li.appendChild(a);
+    }
     menuList.appendChild(li);
   });
   document.getElementById('fullMin').textContent = String(Math.round(totalSec(buildSteps(EXERCISES)) / 60));

@@ -1,6 +1,6 @@
 // 電波がなくても開けるように、ページ一式を端末にしまっておく。
 // 中身を変えたら CACHE の番号を1つ上げる（上げないと古いままになる）。
-const CACHE = 'daily-tr-v6';
+const CACHE = 'daily-tr-v7';
 const FILES = [
   './',
   './index.html',
